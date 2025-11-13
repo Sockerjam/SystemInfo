@@ -2,7 +2,7 @@
 
 A terminal-based system monitor written in 'Rust' 🦀.
 
-![System monitor showing memory and CPU usage](screenshots/memory-view.png)
+![WIP: System monitor showing memory and CPU usage](screenshots/terminal-ui-screenshot-wip.png)
 
 ## Features
 - Real-time memory and CPU monitoring (Disks are wip)
