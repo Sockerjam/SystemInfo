@@ -2,6 +2,7 @@
 
 A terminal-based system monitor written in 'Rust' 🦀.
 
+**Screenshot of WIP**
 ![WIP: System monitor showing memory and CPU usage](screenshots/terminal-ui-screenshot-wip.png)
 
 ## Features
