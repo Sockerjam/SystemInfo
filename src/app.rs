@@ -1,9 +1,9 @@
 pub mod models;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, sync::mpsc::Receiver};
 
 use ratatui::widgets::ScrollbarState;
 use sysinfo::{Components, Cpu, Disks, RefreshKind, System};
-use crate::app::models::{CPU, Memory, OSInfo};
+use crate::app::models::{CPU, AppEvents, Memory, OSInfo};
 const BYTES_TO_GB: f32 = 1024.0 * 1024.0 * 1024.0;
 
 
@@ -83,12 +83,13 @@ pub struct App {
     cpus: Vec<CPU>,
     os_info: OSInfo,
     system_provider: Box<dyn SystemInfoProvider + Send>,
+    rx: Receiver<AppEvents>,
     pub cpu_scroll_state: ScrollbarState,
     pub cpu_scroll_position: usize
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(rx: Receiver<AppEvents>) -> Self {
         let mut system_provider = Box::new(SysInfoAdapter::new());
         system_provider.refresh_all();
         let cpus = system_provider.get_cpus();
@@ -97,6 +98,7 @@ impl App {
            memory: system_provider.get_memory(),
            cpus: cpus,
            os_info: system_provider.get_system_info(),
+           rx: rx,
            cpu_scroll_state: ScrollbarState::new(cpus_content_height),
            cpu_scroll_position: 0,
            system_provider: system_provider,
@@ -131,5 +133,28 @@ impl App {
 
     pub fn get_os_info(&self) -> &OSInfo {
         &self.os_info
+    }
+    
+    pub fn handle_rx(&mut self) -> bool {
+        // Drain all queued events to avoid input lag
+        while let Ok(received_value) = self.rx.try_recv() {
+            match received_value {
+                AppEvents::DOWN => {
+                    self.cpu_scroll_position = self.cpu_scroll_position.saturating_add(5);
+                    self.cpu_scroll_state = self.cpu_scroll_state.position(self.cpu_scroll_position);
+                },
+                AppEvents::UP => {
+                    self.cpu_scroll_position = self.cpu_scroll_position.saturating_sub(5);
+                    self.cpu_scroll_state = self.cpu_scroll_state.position(self.cpu_scroll_position);
+                },
+                AppEvents::UPDATE => {
+                    self.update();
+                }
+                AppEvents::QUIT => {
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

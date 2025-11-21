@@ -17,3 +17,10 @@ pub struct OSInfo {
     pub os_version: String,
     pub system_name: String
 }
+
+pub enum AppEvents {
+    UP,
+    DOWN,
+    QUIT,
+    UPDATE
+}

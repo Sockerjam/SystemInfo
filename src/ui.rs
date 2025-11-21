@@ -1,14 +1,17 @@
 mod colors;
 mod widgets;
+use std::{io, sync::mpsc::Receiver};
+
 use ratatui::{Frame, 
     layout::{Constraint, Direction, Layout, Margin}, 
     prelude::Color, style::Stylize, 
     symbols::border, text::Line, 
     widgets::{Block, Borders, Padding, Scrollbar, ScrollbarOrientation}};
-use crate::{app::App, 
+use crate::{app::{App, models::AppEvents}, 
     ui::widgets::{cpu_widget::{self, CPUWidget}, memory_widget::{self, MemoryWidget}, os_info_widget::{self, OsInfoWidget}}};
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
+    
     let main_window = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -88,3 +91,4 @@ fn make_section_block(use_padding: bool) -> Block<'static> {
         .border_set(border::EMPTY)
         .padding(padding)
 }
+

@@ -3,7 +3,8 @@ mod ui;
 mod event_handler;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::Duration;
 use ratatui::Terminal;
@@ -15,40 +16,34 @@ use std::{io, error::Error};
 use app::App;
 use event_handler::handle_key_event;
 
-fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    app: Arc<Mutex<App>>,
-    should_stop: Arc<AtomicBool>) -> io::Result<()> {
+use crate::app::models::AppEvents;
+
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
     loop {
-        if should_stop.load(Ordering::Relaxed) { return Ok(()) }
-        {
-            let mut app_guard = app.lock().unwrap();
-            terminal.draw(|f| ui::draw(f, &mut app_guard))?;
+        if app.handle_rx() {
+            return Ok(());
         }
-        // Target ~60 FPS: sleep for ~16ms between frames
+        terminal.draw(|f| ui::draw(f, app))?;
         thread::sleep(Duration::from_millis(16));
     }
 }
 
-fn event_handler(app: Arc<Mutex<App>>, should_stop: Arc<AtomicBool>) -> io::Result<()> {
-    loop {
-        {
-            if handle_key_event(&app)? {
-                should_stop.store(true, Ordering::Relaxed);
-                return Ok(())
-            }
-        }
-    }
-}
-
-fn update_system(app: Arc<Mutex<App>>, should_stop: Arc<AtomicBool>) {
+fn event_handler(tx: Sender<AppEvents>, should_stop: Arc<AtomicBool>) {
     loop {
         if should_stop.load(Ordering::Relaxed) {
             break;
         }
-        thread::sleep(Duration::from_secs(1));
-        let mut app_guard = app.lock().unwrap();
-        app_guard.update();
+        handle_key_event(&tx);
+    }
+}
+
+fn update_system(tx: Sender<AppEvents>, should_stop: Arc<AtomicBool>) {
+    loop {
+        if should_stop.load(Ordering::Relaxed) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(750));
+        tx.send(AppEvents::UPDATE).unwrap();
     }
 }
 
@@ -61,25 +56,34 @@ fn main() -> Result<(), Box<dyn Error>> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
+    // setup atomic bool
     let should_stop = Arc::new(AtomicBool::new(false));
     let should_stop_app = should_stop.clone();
-    let should_stop_ui = should_stop.clone();
-    let app = Arc::new(Mutex::new(App::new()));
-    let app_update = app.clone();
-    let event_handler_app = app.clone();
+    let should_stop_event = should_stop_app.clone();
+    
+    // mpsc
+    let (tx, rx) = mpsc::channel();
+    let tx1 = tx.clone();
+
+    // app
+    let mut app = App::new(rx);
     
     let update_app_thread = thread::spawn(move || {
-        update_system(app_update, should_stop_app);
+        update_system(tx1, should_stop_app);
     });
     
     let update_event_handler_thread = thread::spawn(move || {
-        event_handler(event_handler_app, should_stop)
+        event_handler(tx, should_stop_event)
     });
 
-    run_app(&mut terminal, app, should_stop_ui)?;
+    // main loop
+    run_app(&mut terminal, &mut app)?;
+    
+    // shut down
+    should_stop.store(true, Ordering::Relaxed);
     
     update_app_thread.join().unwrap();
-    update_event_handler_thread.join().unwrap()?;
+    update_event_handler_thread.join().unwrap();
     
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;

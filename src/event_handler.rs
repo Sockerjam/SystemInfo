@@ -1,33 +1,30 @@
 use ratatui::crossterm::event::{self, Event, KeyCode};
-use std::{io, sync::{Arc, Mutex}, time::Duration};
-use crate::app::App;
+use std::{io, sync::{Arc, Mutex, mpsc::Sender}, time::Duration};
+use crate::app::{App, models::AppEvents};
 
-pub fn handle_key_event(app: &Arc<Mutex<App>>) -> io::Result<bool> {
-    if event::poll(Duration::from_millis(50))? {
-        let mut app_guard = app.lock().unwrap();
-        if let Event::Key(key) = event::read()? {
-            if key.kind == event::KeyEventKind::Release {
-                return Ok(false) 
-            }
+pub fn handle_key_event(tx: &Sender<AppEvents>) {
+    match event::poll(Duration::from_millis(50)) {
+        Ok(true) => {
+            match event::read() {
+                Ok(Event::Key(key)) => {
+                    if key.kind == event::KeyEventKind::Release {
+                        return
+                    }
+                    match key.code {
+                        KeyCode::Char('q') => tx.send(AppEvents::QUIT).unwrap(),
+                        KeyCode::Down => {
+                            tx.send(AppEvents::DOWN).unwrap();
+                        },
+                        KeyCode::Up => {
+                            tx.send(AppEvents::UP).unwrap();
+                        },
 
-            match key.code {
-                KeyCode::Char('q') => return Ok(true),
-                KeyCode::Down => {
-                    app_guard.cpu_scroll_position = app_guard.cpu_scroll_position.saturating_add(1);
-                    app_guard.cpu_scroll_state = app_guard.cpu_scroll_state.position(app_guard.cpu_scroll_position);
-                    return Ok(false)
+                        _ => return
+                    }
                 },
-                KeyCode::Up => {
-                    app_guard.cpu_scroll_position = app_guard.cpu_scroll_position.saturating_sub(1);
-                    app_guard.cpu_scroll_state = app_guard.cpu_scroll_state.position(app_guard.cpu_scroll_position);
-                    return Ok(false)
-                },
-                
-                _ => return Ok(false)
+                _ => return
             }
-
-        }
+        },
+        _ => {}
     }
-
-    Ok(false)
 }
