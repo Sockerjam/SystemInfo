@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     // setup terminal
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
+    let mut stdout = io::stderr();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
@@ -77,17 +77,27 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // main loop
-    run_app(&mut terminal, &mut app)?;
+    let result = run_app(&mut terminal, &mut app);
     
     // shut down
     should_stop.store(true, Ordering::Relaxed);
     
     update_app_thread.join().unwrap();
     update_event_handler_thread.join().unwrap();
-    
+
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(
+        terminal.backend_mut(), 
+        LeaveAlternateScreen, 
+        DisableMouseCapture
+    )?;
     terminal.show_cursor()?;
+
+    if let Err(err) = result {
+        println!("Got error: {}", err);
+    } else {
+        println!("Bye!");
+    }
     
     Ok(())
 }

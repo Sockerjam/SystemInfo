@@ -15,7 +15,7 @@ trait SystemInfoProvider {
     fn get_system_info(&self) -> OSInfo;
     fn update_used_memory(&self) -> f32;
     fn update_used_swap(&self) -> f32;
-    fn update_cpu_usage(&self, cpu_name: &String) -> u64;
+    fn update_cpu_usage(&self, cpu_index: usize) -> u64;
 }
 
 pub struct SysInfoAdapter {
@@ -39,12 +39,13 @@ impl SystemInfoProvider for SysInfoAdapter {
     }
     
     fn get_cpus(&self) -> Vec<CPU> {
-        self.system.cpus().iter().map(|cpu| 
+        self.system.cpus().iter().enumerate().map(|(index, cpu)|{
             CPU { 
+                index: index,
                 core: cpu.name().to_string(), 
-                usage_history: VecDeque::from([cpu.cpu_usage() as u64]) }
-            )
-            .collect()
+                usage_history: VecDeque::from([cpu.cpu_usage() as u64])
+            }
+        }).collect()
     }
 
     fn get_memory(&self) -> Memory {
@@ -70,10 +71,9 @@ impl SystemInfoProvider for SysInfoAdapter {
         self.system.used_swap() as f32 / BYTES_TO_GB
     }
 
-    fn update_cpu_usage(&self, cpu_name: &String) -> u64 {
+    fn update_cpu_usage(&self, cpu_index: usize) -> u64 {
         self.system.cpus()
-            .iter()
-            .find(|cpu| cpu.name() == cpu_name)
+            .get(cpu_index)
             .map(|cpu| cpu.cpu_usage() as u64)
             .unwrap_or(0)
     }
@@ -119,7 +119,7 @@ impl App {
     fn update_cpu_usage(&mut self) {
         for cpu in &mut self.cpus {
             if cpu.usage_history.len() >= 75 { cpu.usage_history.pop_front(); }
-            cpu.usage_history.push_back(self.system_provider.update_cpu_usage(&cpu.core));
+            cpu.usage_history.push_back(self.system_provider.update_cpu_usage(cpu.index));
         }
     }
 
@@ -136,10 +136,10 @@ impl App {
     }
     
     pub fn handle_rx(&mut self) -> bool {
-        // Drain all queued events to avoid input lag
         while let Ok(received_value) = self.rx.try_recv() {
             match received_value {
                 AppEvents::DOWN => {
+                    if self.cpu_scroll_position >= 5 * self.cpus.len() { return false }
                     self.cpu_scroll_position = self.cpu_scroll_position.saturating_add(5);
                     self.cpu_scroll_state = self.cpu_scroll_state.position(self.cpu_scroll_position);
                 },

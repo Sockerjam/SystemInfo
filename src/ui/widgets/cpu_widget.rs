@@ -1,4 +1,7 @@
-use ratatui::{buffer::Buffer, layout::{Constraint, Direction, Layout, Rect}, style::Style, text::{Line, Span}, widgets::{Block, Borders, Sparkline, SparklineBar, Widget}};
+use ratatui::{buffer::Buffer, layout::{Constraint, Direction, Layout, Rect}, 
+style::Style, 
+text::{Line, Span}, 
+widgets::{Block, Borders, Sparkline, Widget}};
 use crate::ui::colors::{GREEN, ORANGE, RED};
 
 use crate::app::models::CPU;

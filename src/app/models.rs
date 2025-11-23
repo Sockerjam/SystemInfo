@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 pub struct CPU {
+    pub index: usize,
     pub core: String,
     pub usage_history: VecDeque<u64>
 }

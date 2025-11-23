@@ -27,8 +27,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         .constraints(vec![
             Constraint::Percentage(10),
             Constraint::Percentage(20),
-            Constraint::Percentage(30),
-            Constraint::Percentage(30)
+            Constraint::Percentage(50),
         ])
         .split(inner_area);
 
@@ -38,17 +37,14 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     let os_info_area = os_info_section.inner(chunks[0]);
     let memory_area = section.inner(chunks[1]);
     let cpu_area = section.inner(chunks[2]);
-    let disk_area = section.inner(chunks[3]);
 
     let memory_section = section.clone().title(make_title("Memory".to_string()));
     let cpu_section = section.clone().title(make_title("CPU's".to_string()));
-    let disk_section = section.clone().title(make_title("Disk's".to_string()));
     
     frame.render_widget(terminal, main_window[0]);
     frame.render_widget(os_info_section, chunks[0]);
     frame.render_widget(memory_section, chunks[1]);
     frame.render_widget(cpu_section, chunks[2]);
-    frame.render_widget(disk_section, chunks[3]);
     
     let os_info_widget = OsInfoWidget::new(app.get_os_info());
     frame.render_widget(os_info_widget, os_info_area);
