@@ -64,9 +64,9 @@ impl<'a> MemoryWidget<'a> {
     fn get_color(used: f32, total: f32) -> Color {
         let ratio = used / total;
         match ratio {
-            0.0..=50.0 => GREEN,
-            51.0..=70.0 => ORANGE,
-            71.0..=100.0 => RED,
+            0.0..=0.50 => GREEN,
+            0.51..=0.70 => ORANGE,
+            0.71..=1.0 => RED,
             _ => GREEN
         }
     }

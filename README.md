@@ -3,10 +3,10 @@
 A terminal-based system monitor written in 'Rust' 🦀.
 
 **Screenshot of WIP**
-![WIP: System monitor showing memory and CPU usage](screenshots/terminal-ui-screenshot-wip.png)
+![WIP: System monitor showing memory and CPU usage](screenshots/terminal-ui-screenshot.png)
 
 ## Features
-- Real-time memory and CPU monitoring (Disks are wip)
+- Real-time memory and CPU monitoring
 - Progress bars and gauges
 - System details
 
